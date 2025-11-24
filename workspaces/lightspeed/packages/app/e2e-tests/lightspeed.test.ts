@@ -372,5 +372,184 @@ test.describe('Lightspeed tests', () => {
         devMode ? contents[0].messages[1].content : 'Backstage',
       );
     });
+
+    test('Verify Rename chat and its actions', async () => {
+      await test.step('Reload page and open chat options menu', async () => {
+        await sharedPage.reload();
+        await sharedPage.waitForTimeout(3000);
+        const optionsButton = sharedPage
+          .locator(
+            '.pf-v6-c-menu-toggle.pf-m-plain.pf-chatbot__history-actions',
+          )
+          .first();
+        await optionsButton.click();
+      });
+
+      await test.step('Verify context menu options', async () => {
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['conversation.rename'],
+          }),
+        ).toBeVisible();
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['conversation.addToFavorites'],
+          }),
+        ).toBeVisible();
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['conversation.delete'],
+          }),
+        ).toBeVisible();
+      });
+
+      await test.step('Open rename modal and verify initial state', async () => {
+        await sharedPage
+          .getByRole('menuitem', { name: translations['conversation.rename'] })
+          .click();
+        await expect(sharedPage.locator('#rename-modal')).toContainText(
+          translations['conversation.rename.confirm.title'],
+        );
+        await expect(
+          sharedPage.getByRole('textbox', {
+            name: translations['conversation.rename.placeholder'],
+          }),
+        ).toBeVisible();
+        await expect(
+          sharedPage.getByRole('button', {
+            name: translations['conversation.rename.confirm.action'],
+          }),
+        ).toBeDisabled();
+        await expect(
+          sharedPage.getByRole('button', {
+            name: translations['common.cancel'],
+          }),
+        ).toBeVisible();
+      });
+
+      await test.step('Fill in new chat name and submit', async () => {
+        await sharedPage
+          .getByRole('textbox', {
+            name: translations['conversation.rename.placeholder'],
+          })
+          .fill('Test Rename');
+        await sharedPage
+          .getByRole('button', {
+            name: translations['conversation.rename.confirm.action'],
+          })
+          .click();
+        await expect(
+          sharedPage.locator('li').filter({ hasText: 'Test Rename' }),
+        ).toBeVisible();
+      });
+    });
+
+    test('Verify favorites menu and its actions', async () => {
+      await test.step('Verify initial state shows no favorites', async () => {
+        await sharedPage.waitForTimeout(1000);
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['chatbox.emptyState.noFavorites'],
+          }),
+        ).toBeVisible();
+      });
+
+      await test.step('Add chat to favorites', async () => {
+        const optionsButton = sharedPage
+          .locator(
+            '.pf-v6-c-menu-toggle.pf-m-plain.pf-chatbot__history-actions',
+          )
+          .first();
+        await optionsButton.click();
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['conversation.addToFavorites'],
+          }),
+        ).toBeVisible();
+        await sharedPage
+          .getByRole('menuitem', {
+            name: translations['conversation.addToFavorites'],
+          })
+          .click();
+      });
+
+      await test.step('Verify chat appears in favorites', async () => {
+        const sidePanel = sharedPage.locator('.pf-v6-c-drawer__panel-main');
+        const favoriteChat = sidePanel
+          .locator('li.pf-chatbot__menu-item')
+          .first();
+        await expect(favoriteChat).toContainText('Test Rename');
+        await expect(
+          sharedPage.getByRole('menuitem', {
+            name: translations['chatbox.emptyState.noFavorites'],
+          }),
+        ).not.toBeVisible();
+      });
+    });
+
+    test('Verify delete chat and its actions', async () => {
+      await test.step('Trigger delete confirmation for chat', async () => {
+        await expect(
+          sharedPage.locator('li').filter({ hasText: 'Test Rename' }),
+        ).toBeVisible();
+        await sharedPage
+          .locator('li')
+          .filter({ hasText: 'Test Rename' })
+          .locator('div')
+          .getByLabel(translations['aria.options.label'])
+          .click();
+        await sharedPage
+          .getByRole('menuitem', { name: translations['conversation.delete'] })
+          .click();
+      });
+
+      await test.step('Verify delete confirmation content', async () => {
+        await expect(sharedPage.locator('#delete-modal')).toContainText(
+          translations['conversation.delete.confirm.title'],
+        );
+        await expect(
+          sharedPage.locator('#delete-modal-body-confirmation'),
+        ).toContainText(translations['conversation.delete.confirm.message']);
+        await expect(
+          sharedPage.getByRole('button', {
+            name: translations['conversation.delete.confirm.action'],
+          }),
+        ).toBeVisible();
+        await expect(
+          sharedPage.getByRole('button', {
+            name: translations['common.cancel'],
+          }),
+        ).toBeVisible();
+      });
+
+      await test.step('Cancel delete and verify chat still exists', async () => {
+        await sharedPage
+          .getByRole('button', { name: translations['common.cancel'] })
+          .click();
+        await expect(
+          sharedPage.locator('li').filter({ hasText: 'Test Rename' }),
+        ).toBeVisible();
+      });
+
+      await test.step('Delete chat and verify it is removed', async () => {
+        await sharedPage
+          .locator('li')
+          .filter({ hasText: 'Test Rename' })
+          .locator('div')
+          .getByLabel(translations['aria.options.label'])
+          .click();
+        await sharedPage
+          .getByRole('menuitem', { name: translations['conversation.delete'] })
+          .click();
+        await sharedPage
+          .getByRole('button', {
+            name: translations['conversation.delete.confirm.action'],
+          })
+          .click();
+        await expect(
+          sharedPage.locator('li').filter({ hasText: 'Test Rename' }),
+        ).not.toBeVisible();
+      });
+    });
   });
 });
