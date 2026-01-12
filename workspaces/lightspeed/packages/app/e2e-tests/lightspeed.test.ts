@@ -138,7 +138,7 @@ test.describe('Lightspeed tests', () => {
     let lightspeedPage: LightspeedPage;
 
     test.beforeEach(async () => {
-      lightspeedPage = new LightspeedPage(sharedPage);
+      lightspeedPage = new LightspeedPage(sharedPage, translations);
       await lightspeedPage.goto('/');
     });
 

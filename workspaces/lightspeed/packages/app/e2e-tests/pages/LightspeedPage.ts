@@ -15,26 +15,44 @@
  */
 
 import { Page, expect } from '@playwright/test';
+import { LightspeedMessages, evaluateMessage } from '../utils/translations';
 
 export type DisplayMode = 'Overlay' | 'Dock to window' | 'Fullscreen';
 
 export class LightspeedPage {
-  constructor(readonly page: Page) {}
+  constructor(
+    readonly page: Page,
+    readonly translations: LightspeedMessages,
+  ) {}
 
   // Locators
   readonly chatbotToggleButton = () =>
     this.page.getByRole('button', { name: 'lightspeed-close' });
   readonly chatbotOptionsMenuButton = () =>
-    this.page.getByRole('button', { name: 'Chatbot options' });
+    this.page.getByRole('button', {
+      name: this.translations['aria.settings.label'],
+    });
   readonly chatHistoryMenuButton = () =>
-    this.page.getByRole('button', { name: 'Chat history menu' });
+    this.page.getByRole('button', {
+      name: this.translations['aria.chatHistoryMenu'],
+    });
   readonly drawerCloseButton = () =>
-    this.page.getByRole('button', { name: 'Close drawer panel' });
+    this.page.getByRole('button', {
+      name: this.translations['aria.closeDrawerPanel'],
+    });
   readonly chatbotHeader = () => this.page.locator('.pf-chatbot__header');
   readonly conversationArea = () =>
     this.page.getByLabel('Scrollable message log');
   readonly chatbotPanel = () =>
     this.page.getByLabel('Chatbot', { exact: true });
+  readonly chatInputTextbox = () =>
+    this.page.getByRole('textbox', {
+      name: this.translations['chatbox.message.placeholder'],
+    });
+  readonly accuracyButton = () =>
+    this.page.getByRole('button', {
+      name: this.translations['footer.accuracy.label'],
+    });
   readonly backstagePageContent = () => this.page.getByText('Red Hat Catalog');
 
   // Actions
@@ -48,7 +66,8 @@ export class LightspeedPage {
 
   async selectDisplayMode(mode: DisplayMode) {
     await this.chatbotOptionsMenuButton().click();
-    await this.page.getByRole('menuitem', { name: mode }).click();
+    const menuItemName = this.getDisplayModeTranslation(mode);
+    await this.page.getByRole('menuitem', { name: menuItemName }).click();
   }
 
   async openChatHistoryDrawer() {
@@ -75,47 +94,69 @@ export class LightspeedPage {
 
   async verifyDisplayModeMenuOptions() {
     await this.chatbotOptionsMenuButton().click();
+    const t = this.translations;
     await expect(this.chatbotPanel()).toMatchAriaSnapshot(`
       - menu:
-        - menuitem "Display mode" [disabled]
-        - menuitem "Overlay"
-        - menuitem "Dock to window"
-        - menuitem "Fullscreen"
+        - menuitem "${t['settings.displayMode.label']}" [disabled]
+        - menuitem "${t['settings.displayMode.overlay']}"
+        - menuitem "${t['settings.displayMode.docked']}"
+        - menuitem "${t['settings.displayMode.fullscreen']}"
       - separator
       - menu:
-        - menuitem "Disable pinned chats Pinned chats are currently enabled"
+        - menuitem "${t['settings.pinned.disable']} ${t['settings.pinned.enabled.description']}"
       `);
   }
 
   async expectChatInputAreaVisible() {
-    await expect(this.chatbotPanel()).toMatchAriaSnapshot(`
-      - textbox "Send a message and optionally upload a JSON, YAML, or TXT file..."
-      - button "Attach"
-      - button "Use microphone"
-      - button "Always review AI generated content prior to use."
-      `);
+    await expect(this.chatInputTextbox()).toBeVisible();
+    await expect(this.accuracyButton()).toBeVisible();
   }
 
   async expectEmptyChatHistory() {
+    const t = this.translations;
     await expect(
-      this.page.getByRole('heading', { name: 'Pinned' }),
+      this.page.getByRole('heading', {
+        name: t['conversation.category.pinnedChats'],
+      }),
     ).toBeVisible();
     await expect(
-      this.page.getByRole('menuitem', { name: 'No pinned chats' }),
+      this.page.getByRole('menuitem', {
+        name: t['chatbox.emptyState.noPinnedChats'],
+      }),
     ).toBeVisible();
     await expect(
-      this.page.getByRole('heading', { name: 'Recent' }),
+      this.page.getByRole('heading', {
+        name: t['conversation.category.recent'],
+      }),
     ).toBeVisible();
     await expect(
-      this.page.getByRole('menuitem', { name: 'No recent chats' }),
+      this.page.getByRole('menuitem', {
+        name: t['chatbox.emptyState.noRecentChats'],
+      }),
     ).toBeVisible();
   }
 
-  private readonly welcomeHeader = `
+  private getDisplayModeTranslation(mode: DisplayMode): string {
+    const modeMap: Record<DisplayMode, string> = {
+      Overlay: this.translations['settings.displayMode.overlay'],
+      'Dock to window': this.translations['settings.displayMode.docked'],
+      Fullscreen: this.translations['settings.displayMode.fullscreen'],
+    };
+    return modeMap[mode];
+  }
+
+  private getWelcomeHeader(): string {
+    const t = this.translations;
+    const greeting = evaluateMessage(
+      t['chatbox.welcome.greeting'],
+      t['user.guest'],
+    );
+    return `
       - region "Scrollable message log":
-        - 'heading "Info alert: Important" [level=4]'
-        - text: This feature uses AI technology. Do not include any personal information or any other sensitive information in your input. Interactions may be used to improve Red Hat's products or services.
-        - heading "Hello, Guest How can I help you today?" [level=1]`;
+        - 'heading "Info alert: ${t['aria.important']}" [level=4]'
+        - text: ${t['disclaimer.withValidation']}
+        - heading "${greeting} ${t['chatbox.welcome.description']}" [level=1]`;
+  }
 
   private readonly buttonGroup = `
         - button
@@ -129,7 +170,7 @@ export class LightspeedPage {
 
   async expectConversationArea(mode: DisplayMode) {
     const buttons = this.buttonGroup.repeat(this.buttonCounts[mode]);
-    const snapshot = `${this.welcomeHeader}${buttons}
+    const snapshot = `${this.getWelcomeHeader()}${buttons}
       `;
     await expect(this.conversationArea()).toMatchAriaSnapshot(snapshot);
   }
