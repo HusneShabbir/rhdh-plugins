@@ -92,6 +92,12 @@ export async function verifySidePanelConversation(
   translations: LightspeedMessages,
 ) {
   const sidePanel = page.locator('.pf-v6-c-drawer__panel-main');
+
+  // Ensure the drawer is open before checking the side panel
+  const isVisible = await sidePanel.isVisible();
+  if (!isVisible) {
+    await openChatDrawer(page, translations);
+  }
   await expect(sidePanel).toBeVisible();
 
   const newButton = sidePanel.getByRole('button', {
