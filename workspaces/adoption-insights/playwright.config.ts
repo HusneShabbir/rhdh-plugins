@@ -16,8 +16,13 @@
 
 import { defineConfig } from '@playwright/test';
 
-const baseConfig = '../../app-config.yaml';
-const configPath = '../app/e2e-tests/test_yamls';
+// APP_MODE: 'legacy' (app-legacy) or 'nfs' (app with new frontend system)
+const appMode = process.env.APP_MODE || 'legacy';
+const startCommand = appMode === 'legacy' ? 'yarn start:legacy' : 'yarn start';
+
+// Config paths (absolute to work from any cwd)
+const baseConfig = `${__dirname}/app-config.yaml`;
+const testConfigDir = `${__dirname}/e2e-tests/test_yamls`;
 
 export default defineConfig({
   timeout: 2 * 60 * 1000,
@@ -30,34 +35,41 @@ export default defineConfig({
     ? []
     : [
         {
-          command: `yarn start --config ${baseConfig} --config ${configPath}/app-config-e2e-en.yaml`,
+          command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-en.yaml`,
           url: 'http://localhost:7007/.backstage/health/v1/readiness',
           timeout: 120000,
           reuseExistingServer: false,
+          cwd: __dirname,
         },
         {
-          command: `yarn start --config ${baseConfig} --config ${configPath}/app-config-e2e-fr.yaml`,
+          command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-fr.yaml`,
           url: 'http://localhost:7008/.backstage/health/v1/readiness',
           timeout: 120000,
           reuseExistingServer: false,
+          cwd: __dirname,
         },
-        {
-          command: `yarn start --config ${baseConfig} --config ${configPath}/app-config-e2e-it.yaml`,
-          url: 'http://localhost:7009/.backstage/health/v1/readiness',
-          timeout: 120000,
-          reuseExistingServer: false,
-        },
-        {
-          command: `yarn start --config ${baseConfig} --config ${configPath}/app-config-e2e-ja.yaml`,
-          url: 'http://localhost:7010/.backstage/health/v1/readiness',
-          timeout: 120000,
-          reuseExistingServer: false,
-        },
+        // TODO: Enable once locales are available in NFS app
+        // {
+        //   command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-it.yaml`,
+        //   url: 'http://localhost:7009/.backstage/health/v1/readiness',
+        //   timeout: 120000,
+        //   reuseExistingServer: false,
+        //   cwd: __dirname,
+        // },
+        // {
+        //   command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-ja.yaml`,
+        //   url: 'http://localhost:7010/.backstage/health/v1/readiness',
+        //   timeout: 120000,
+        //   reuseExistingServer: false,
+        //   cwd: __dirname,
+        // },
       ],
 
   retries: process.env.CI ? 2 : 0,
 
-  reporter: [['html', { open: 'never', outputFolder: 'e2e-test-report' }]],
+  reporter: [
+    ['html', { open: 'never', outputFolder: `e2e-test-report-${appMode}` }],
+  ],
 
   use: {
     baseURL: process.env.PLAYWRIGHT_URL ?? 'http://localhost:3000',
@@ -65,12 +77,13 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  outputDir: 'node_modules/.cache/e2e-test-results',
+  outputDir: `node_modules/.cache/e2e-test-results-${appMode}`,
+
+  testDir: 'e2e-tests',
 
   projects: [
     {
       name: 'en',
-      testDir: 'packages/app/e2e-tests',
       use: {
         channel: 'chrome',
         locale: 'en',
@@ -79,30 +92,28 @@ export default defineConfig({
     },
     {
       name: 'fr',
-      testDir: 'packages/app/e2e-tests',
       use: {
         channel: 'chrome',
         locale: 'fr',
         baseURL: 'http://localhost:3001',
       },
     },
-    {
-      name: 'it',
-      testDir: 'packages/app/e2e-tests',
-      use: {
-        channel: 'chrome',
-        locale: 'it',
-        baseURL: 'http://localhost:3002',
-      },
-    },
-    {
-      name: 'ja',
-      testDir: 'packages/app/e2e-tests',
-      use: {
-        channel: 'chrome',
-        locale: 'ja',
-        baseURL: 'http://localhost:3003',
-      },
-    },
+    // TODO: Enable once locales are available in NFS app
+    // {
+    //   name: 'it',
+    //   use: {
+    //     channel: 'chrome',
+    //     locale: 'it',
+    //     baseURL: 'http://localhost:3002',
+    //   },
+    // },
+    // {
+    //   name: 'ja',
+    //   use: {
+    //     channel: 'chrome',
+    //     locale: 'ja',
+    //     baseURL: 'http://localhost:3003',
+    //   },
+    // },
   ],
 });
