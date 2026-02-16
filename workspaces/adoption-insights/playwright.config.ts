@@ -48,21 +48,20 @@ export default defineConfig({
           reuseExistingServer: false,
           cwd: __dirname,
         },
-        // TODO: Enable once locales are available in NFS app
-        // {
-        //   command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-it.yaml`,
-        //   url: 'http://localhost:7009/.backstage/health/v1/readiness',
-        //   timeout: 120000,
-        //   reuseExistingServer: false,
-        //   cwd: __dirname,
-        // },
-        // {
-        //   command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-ja.yaml`,
-        //   url: 'http://localhost:7010/.backstage/health/v1/readiness',
-        //   timeout: 120000,
-        //   reuseExistingServer: false,
-        //   cwd: __dirname,
-        // },
+        {
+          command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-it.yaml`,
+          url: 'http://localhost:7009/.backstage/health/v1/readiness',
+          timeout: 120000,
+          reuseExistingServer: false,
+          cwd: __dirname,
+        },
+        {
+          command: `${startCommand} --config ${baseConfig} --config ${testConfigDir}/app-config-e2e-ja.yaml`,
+          url: 'http://localhost:7010/.backstage/health/v1/readiness',
+          timeout: 120000,
+          reuseExistingServer: false,
+          cwd: __dirname,
+        },
       ],
 
   retries: process.env.CI ? 2 : 0,
@@ -98,22 +97,21 @@ export default defineConfig({
         baseURL: 'http://localhost:3001',
       },
     },
-    // TODO: Enable once locales are available in NFS app
-    // {
-    //   name: 'it',
-    //   use: {
-    //     channel: 'chrome',
-    //     locale: 'it',
-    //     baseURL: 'http://localhost:3002',
-    //   },
-    // },
-    // {
-    //   name: 'ja',
-    //   use: {
-    //     channel: 'chrome',
-    //     locale: 'ja',
-    //     baseURL: 'http://localhost:3003',
-    //   },
-    // },
+    {
+      name: 'it',
+      use: {
+        channel: 'chrome',
+        locale: 'it',
+        baseURL: 'http://localhost:3002',
+      },
+    },
+    {
+      name: 'ja',
+      use: {
+        channel: 'chrome',
+        locale: 'ja',
+        baseURL: 'http://localhost:3003',
+      },
+    },
   ],
 });
