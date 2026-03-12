@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useState } from 'react';
+import { useCallback, useReducer, useState } from 'react';
 import useAsync from 'react-use/lib/useAsync';
-import { useRouteRefParams } from '@backstage/core-plugin-api';
+import { useNavigate } from 'react-router-dom';
+import { useRouteRef, useRouteRefParams } from '@backstage/core-plugin-api';
 import {
   Content,
   Header,
@@ -24,23 +25,95 @@ import {
   ResponseErrorPanel,
 } from '@backstage/core-components';
 import { Box, Grid } from '@material-ui/core';
-import Alert from '@material-ui/lab/Alert';
-import AlertTitle from '@material-ui/lab/AlertTitle';
 
 import { useClientService } from '../../ClientService';
 import { useTranslation } from '../../hooks/useTranslation';
-import { projectRouteRef } from '../../routes';
+import { useBulkRun } from '../../hooks/useBulkRun';
+import { useProjectWriteAccess } from '../../hooks/useProjectWriteAccess';
+import { projectRouteRef, rootRouteRef } from '../../routes';
 import { ProjectPageBreadcrumb } from './ProjectPageBreadcrumb';
 import { ProjectDetailsCard } from './ProjectDetailsCard';
 import { ProjectModulesCard } from './ProjectModulesCard';
 import { InitPhaseCard } from './InitPhaseCard';
+import { DeleteProjectDialog } from '../DeleteProjectDialog';
+import { BulkRunConfirmDialog } from '../BulkRunConfirmDialog';
+import { ProjectActions, ProjectActionsProps } from './ProjectActions';
+import { extractResponseError } from '../tools';
 
 export const ProjectPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { projectId } = useRouteRefParams(projectRouteRef);
+  const rootPath = useRouteRef(rootRouteRef);
   const clientService = useClientService();
-  // TODO: call actions - delete, sync
-  const [error, _] = useState<string | undefined>();
+  const { runAllForProject } = useBulkRun();
+  const { canWriteProject } = useProjectWriteAccess();
+  const [error, setError] = useState<Error | null>(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [bulkRunModalOpen, setBulkRunModalOpen] = useState(false);
+  const [isBulkRunning, setIsBulkRunning] = useState(false);
+  const [refreshKey, forceRefresh] = useReducer(x => x + 1, 0);
+  const menuOpen = Boolean(menuAnchorEl);
+
+  const handleMenuOpen: ProjectActionsProps['handleMenuOpen'] = useCallback(
+    event => {
+      setMenuAnchorEl(event.currentTarget);
+    },
+    [],
+  );
+
+  const handleMenuClose = useCallback(() => {
+    setMenuAnchorEl(null);
+  }, []);
+
+  const handleDeleteClick = useCallback(() => {
+    setError(null);
+    handleMenuClose();
+    setDeleteModalOpen(true);
+  }, [handleMenuClose]);
+
+  const handleRunAllClick = useCallback(() => {
+    setError(null);
+    handleMenuClose();
+    setBulkRunModalOpen(true);
+  }, [handleMenuClose]);
+
+  const handleDeleteModalClose = useCallback(() => {
+    if (!isDeleting) {
+      setDeleteModalOpen(false);
+      setError(null);
+    }
+  }, [isDeleting]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    setError(null);
+    setIsDeleting(true);
+
+    try {
+      const response = await clientService.projectsProjectIdDelete({
+        path: { projectId },
+      });
+      setDeleteModalOpen(false);
+
+      if (!response.ok) {
+        const message = await extractResponseError(
+          response,
+          t('projectPage.deleteError'),
+        );
+        setError(new Error(message));
+        return;
+      }
+
+      navigate(rootPath());
+    } catch (e) {
+      setDeleteModalOpen(false);
+      setError(e as Error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [clientService, projectId, navigate, rootPath, t]);
 
   const {
     value: project,
@@ -51,7 +124,7 @@ export const ProjectPage = () => {
       path: { projectId },
     });
     return await response.json();
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   const {
     value: modules,
@@ -62,7 +135,37 @@ export const ProjectPage = () => {
       path: { projectId },
     });
     return await response.json();
-  }, [projectId]);
+  }, [projectId, refreshKey]);
+
+  const handleBulkRunModalClose = useCallback(() => {
+    if (!isBulkRunning) {
+      setBulkRunModalOpen(false);
+      setError(null);
+    }
+  }, [isBulkRunning]);
+
+  const handleBulkRunConfirm = useCallback(async () => {
+    if (!project) return;
+    setError(null);
+    setIsBulkRunning(true);
+
+    try {
+      const result = await runAllForProject(project, modules);
+      setBulkRunModalOpen(false);
+
+      if (result.failed > 0) {
+        setError(
+          new Error(t('bulkRun.errorProject' as any, { name: project.name })),
+        );
+      }
+      forceRefresh();
+    } catch (e) {
+      setBulkRunModalOpen(false);
+      setError(e as Error);
+    } finally {
+      setIsBulkRunning(false);
+    }
+  }, [project, modules, runAllForProject, forceRefresh, t]);
 
   const loadError = projectError || modulesError;
   if (loadError) {
@@ -76,20 +179,52 @@ export const ProjectPage = () => {
     );
   }
 
+  const projectWritePermitted = !!(project && canWriteProject(project));
   const isLoading = projectLoading || modulesLoading;
   return (
     <Page themeId="tool">
-      <Header title={t('projectPage.title')} />
+      <Header title={t('projectPage.title')}>
+        {project && (
+          <ProjectActions
+            menuOpen={menuOpen}
+            handleMenuOpen={handleMenuOpen}
+            handleMenuClose={handleMenuClose}
+            menuAnchorEl={menuAnchorEl}
+            handleDeleteClick={handleDeleteClick}
+            handleRunAllClick={handleRunAllClick}
+            canRunAll={projectWritePermitted}
+            canDeleteProject={projectWritePermitted}
+          />
+        )}
+      </Header>
+
+      <DeleteProjectDialog
+        open={deleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        projectName={project?.name ?? ''}
+      />
+
+      <BulkRunConfirmDialog
+        idPostfix="project-page"
+        open={bulkRunModalOpen}
+        title={t('bulkRun.projectPageConfirm.title' as any, {
+          name: project?.name ?? '',
+        })}
+        message={t('bulkRun.projectPageConfirm.message')}
+        isRunning={isBulkRunning}
+        onConfirm={handleBulkRunConfirm}
+        onClose={handleBulkRunModalClose}
+      />
 
       <Content>
         <Box mb={2}>
           <ProjectPageBreadcrumb />
         </Box>
-        {error && (
-          <Alert severity="error">
-            <AlertTitle>{error}</AlertTitle>
-          </Alert>
-        )}
+
+        {error && <ResponseErrorPanel error={error} />}
+
         {isLoading && <Progress />}
         {!isLoading && project && (
           <Grid container spacing={2}>
@@ -104,7 +239,6 @@ export const ProjectPage = () => {
             <Grid item xs={12}>
               <InitPhaseCard project={project} />
             </Grid>
-            {/* TODO: actions - delete, sync*/}
           </Grid>
         )}
       </Content>

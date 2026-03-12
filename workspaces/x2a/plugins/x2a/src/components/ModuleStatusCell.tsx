@@ -15,8 +15,11 @@
  */
 
 import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
-import { ModuleStatus } from '@red-hat-developer-hub/backstage-plugin-x2a-common';
-import { Tooltip, Box } from '@material-ui/core';
+import {
+  Module,
+  ModuleStatus,
+} from '@red-hat-developer-hub/backstage-plugin-x2a-common';
+import { Tooltip, Box, makeStyles, Chip } from '@material-ui/core';
 import {
   StatusError,
   StatusOK,
@@ -26,41 +29,99 @@ import {
 
 import { useTranslation } from '../hooks/useTranslation';
 
-const StatusIcon = ({ status }: { status?: ModuleStatus }) => {
+const useStyles = makeStyles(theme => ({
+  toReviewChip: {
+    marginLeft: theme.spacing(1),
+    marginBottom: 0,
+  },
+  unknownStatus: {
+    fontWeight: theme.typography.fontWeightMedium as any,
+    display: 'flex',
+    alignItems: 'baseline',
+  },
+  unknownStatusIcon: {
+    flexShrink: 0,
+    position: 'relative',
+    top: '0.125em',
+    marginRight: theme.spacing(1),
+    width: '0.8em',
+    height: '0.8em',
+  },
+}));
+
+const StatusWithText = ({
+  status,
+  children,
+}: {
+  status?: ModuleStatus;
+  children?: React.ReactNode;
+}) => {
+  const classes = useStyles();
   switch (status) {
     case 'success':
-      return <StatusOK />;
+      return <StatusOK>{children}</StatusOK>;
     case 'error':
-      return <StatusError />;
+      return <StatusError>{children}</StatusError>;
     case 'running':
-      return <StatusRunning />;
+      return <StatusRunning>{children}</StatusRunning>;
     case 'pending':
-      return <StatusPending />;
+      return <StatusPending>{children}</StatusPending>;
     default:
-      return <HelpOutlineIcon fontSize="small" color="disabled" />;
+      return (
+        <Box component="span" className={classes.unknownStatus}>
+          <HelpOutlineIcon
+            color="disabled"
+            className={classes.unknownStatusIcon}
+          />
+          {children}
+        </Box>
+      );
   }
 };
 
-export const ModuleStatusCell = ({
-  status,
-  errorDetails,
-}: {
-  status?: ModuleStatus;
-  errorDetails?: string;
-}) => {
+export const ModuleStatusCell = ({ module }: { module?: Module }) => {
   const { t } = useTranslation();
+  const styles = useStyles();
 
+  let chip;
+  if (module?.status === 'success') {
+    if (module.publish) {
+      chip = (
+        <Chip
+          label={t('projectModulesCard.published')}
+          size="small"
+          variant="outlined"
+          color="primary"
+          className={styles.toReviewChip}
+        />
+      );
+    } else {
+      chip = (
+        <Chip
+          label={t('projectModulesCard.toReview')}
+          size="small"
+          variant="outlined"
+          color="primary"
+          className={styles.toReviewChip}
+        />
+      );
+    }
+  }
+
+  const status = module?.status;
   const statusText = t(`module.statuses.${status || 'none'}`);
   const content = (
-    <Box display="flex" alignItems="center">
-      <StatusIcon status={status} />
-      <div>{statusText}</div>
+    <Box display="flex" flexWrap="wrap" alignItems="center">
+      <Box whiteSpace="nowrap">
+        <StatusWithText status={status}>{statusText}</StatusWithText>
+      </Box>
+      {chip}
     </Box>
   );
 
-  if (errorDetails) {
+  if (module?.errorDetails) {
     return (
-      <Tooltip title={errorDetails}>
+      <Tooltip title={module.errorDetails}>
         <div>{content}</div>
       </Tooltip>
     );

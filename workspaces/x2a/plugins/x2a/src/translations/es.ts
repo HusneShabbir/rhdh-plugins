@@ -34,6 +34,10 @@ const x2aPluginTranslationEs = createTranslationMessages({
     'table.columns.targetRepo': 'Repositorio de destino',
     'table.columns.createdAt': 'Creado el',
     'table.actions.deleteProject': 'Eliminar proyecto',
+    'table.actions.expandAll': 'Expandir todas las filas',
+    'table.actions.collapseAll': 'Contraer todas las filas',
+    'table.actions.expandRow': 'Expandir fila',
+    'table.actions.collapseRow': 'Contraer fila',
     'table.projectsCount': 'Proyectos ({{count}})',
     empty: '-',
     'initPhaseCard.title': 'Fase de descubrimiento',
@@ -47,7 +51,19 @@ const x2aPluginTranslationEs = createTranslationMessages({
     'projectDetailsCard.targetRepo': 'Repositorio de destino',
     'projectModulesCard.title': 'Módulos ({{count}})',
     'projectModulesCard.noModules': 'Aún no se encontraron módulos...',
+    'projectModulesCard.toReview': 'revisar',
+    'projectModulesCard.published': 'publicado',
     'projectPage.title': 'Proyecto',
+    'projectPage.actionsTooltip':
+      'Haga clic para abrir el menú para las acciones del proyecto',
+    'projectPage.deleteError': 'Error al eliminar el proyecto',
+    'projectPage.deleteProject': 'Eliminar',
+    'projectPage.deleteConfirm.title': '¿Eliminar proyecto "{{name}}"?',
+    'projectPage.deleteConfirm.message':
+      'Este proyecto, todos sus módulos y trabajos se eliminarán permanentemente. Esta acción no se puede deshacer. Los artefactos persistidos en el repositorio de destino se preservarán.',
+    'projectPage.deleteConfirm.cancel': 'Cancelar',
+    'projectPage.deleteConfirm.confirm': 'Eliminar',
+    'projectTable.deleteError': 'Error al eliminar el proyecto',
     'project.description': 'Descripción',
     'project.id': 'ID',
     'project.abbreviation': 'Abreviatura',
@@ -80,7 +96,10 @@ const x2aPluginTranslationEs = createTranslationMessages({
     'module.summary.pending': 'Pendiente',
     'module.summary.running': 'En ejecución',
     'module.summary.error': 'Error',
-    'module.summary.toReview': 'para revisar',
+    'module.summary.toReview_one':
+      '{{count}} módulo con artefactos para revisar',
+    'module.summary.toReview_other':
+      '{{count}} módulos con artefactos para revisar',
     'module.actions.runNextPhase': 'Ejecutar siguiente fase',
     'module.currentPhase': 'Fase actual',
     'module.lastUpdate': 'Última actualización',
@@ -98,15 +117,15 @@ const x2aPluginTranslationEs = createTranslationMessages({
     'module.statuses.error': 'Error',
     'artifact.types.migrated_sources': 'Fuentes migradas',
     'artifact.types.project_metadata': 'Metadatos del proyecto',
-    'artifact.types.ansible_project': 'Proyecto Ansible',
+    'artifact.types.ansible_project': 'Proyecto AAP',
     'modulePage.title': 'Detalles del módulo',
-    'modulePage.artifacts.title': 'Artefactos',
+    'modulePage.artifacts.title': 'Artefactos para revisar',
     'modulePage.artifacts.migration_plan':
       'Plan de migración general del proyecto',
     'modulePage.artifacts.module_migration_plan':
       'Plan del módulo por análisis',
     'modulePage.artifacts.migrated_sources': 'Fuentes migradas',
-    'modulePage.artifacts.ansible_project': 'Proyecto Ansible',
+    'modulePage.artifacts.ansible_project': 'Proyecto AAP',
     'modulePage.artifacts.description':
       'Estos artefactos son generados por el proceso de conversión y están disponibles para revisión.',
     'modulePage.phases.title': 'Fases de migración',
@@ -144,8 +163,51 @@ const x2aPluginTranslationEs = createTranslationMessages({
     'modulePage.phases.viewLog': 'Ver registro',
     'modulePage.phases.hideLog': 'Ocultar registro',
     'modulePage.phases.noLogsAvailable': 'Aún no hay registros disponibles...',
+    'modulePage.phases.telemetry.title': 'Telemetría',
+    'modulePage.phases.telemetry.noTelemetryAvailable':
+      'No hay telemetría disponible',
+    'modulePage.phases.telemetry.agentName': 'Nombre del agente',
+    'modulePage.phases.telemetry.duration': 'Duración',
+    'modulePage.phases.telemetry.inputTokens': 'Tokens de entrada',
+    'modulePage.phases.telemetry.outputTokens': 'Tokens de salida',
+    'modulePage.phases.telemetry.toolCalls':
+      'Cantidad de llamadas de herramientas',
     'modulePage.phases.resyncMigrationPlanInstructions':
       'Resincronizar la lista de módulos para que coincida con el plan de migración.',
+    'time.duration.daysAndHours': '{{days}}d {{hours}}h',
+    'time.duration.daysOnly': '{{days}}d',
+    'time.duration.hoursAndMinutes': '{{hours}}h {{minutes}}min',
+    'time.duration.hoursOnly': '{{hours}}h',
+    'time.duration.minutesAndSeconds': '{{minutes}}min {{seconds}}s',
+    'time.duration.secondsOnly': '{{seconds}}s',
+    'time.ago.daysAndHours': 'hace {{days}}d {{hours}}h',
+    'time.ago.daysOnly': 'hace {{days}}d',
+    'time.ago.hoursAndMinutes': 'hace {{hours}}h {{minutes}}min',
+    'time.ago.hoursOnly': 'hace {{hours}}h',
+    'time.ago.minutes': 'hace {{minutes}}min',
+    'time.ago.lessThanMinute': 'hace <1min',
+    'time.jobTiming.noStartTime': '-',
+    'time.jobTiming.running': 'En ejecución desde hace {{duration}}',
+    'time.jobTiming.finished': 'Finalizado {{timeAgo}} (duró {{duration}})',
+    'bulkRun.projectAction': 'Ejecutar todos los módulos',
+    'bulkRun.globalAction': 'Ejecutar todo',
+    'bulkRun.projectPageAction': 'Ejecutar todo',
+    'bulkRun.projectConfirm.title':
+      '¿Ejecutar todos los módulos en el proyecto "{{name}}"?',
+    'bulkRun.projectConfirm.message':
+      'Esto activará la siguiente fase de migración para cada módulo en este proyecto cuyo estado actual lo permita. Asegúrese de haber revisado todos los artefactos necesarios en los repositorios de destino antes de ejecutar esta acción. Los módulos que no sean elegibles se omitirán.',
+    'bulkRun.globalConfirm.title': '¿Ejecutar todos los módulos elegibles?',
+    'bulkRun.globalConfirm.message':
+      'Esto activará la siguiente fase de migración para todos los módulos elegibles en todos los proyectos a los que tiene acceso de escritura, incluidos los proyectos no visibles en la página actual. Asegúrese de haber revisado todos los artefactos necesarios en los repositorios de destino antes de ejecutar esta acción.',
+    'bulkRun.projectPageConfirm.title':
+      '¿Ejecutar todos los módulos en "{{name}}"?',
+    'bulkRun.projectPageConfirm.message':
+      'Esto activará la siguiente fase de migración para cada módulo en este proyecto cuyo estado actual lo permita. Asegúrese de haber revisado todos los artefactos necesarios en los repositorios de destino antes de ejecutar esta acción. Los módulos que no sean elegibles se omitirán.',
+    'bulkRun.confirm': 'Ejecutar todo',
+    'bulkRun.cancel': 'Cancelar',
+    'bulkRun.errorProject':
+      'Error al ejecutar los módulos en el proyecto "{{name}}"',
+    'bulkRun.errorGlobal': 'Error en la operación masiva',
   },
 });
 
