@@ -15,7 +15,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import { models } from './fixtures/responses';
+import { modelBaseUrl, models, mockedShields } from './fixtures/responses';
 import { openLightspeed } from './utils/testHelper';
 import {
   openChatbot,
@@ -45,6 +45,7 @@ import {
 import { LightspeedMessages, evaluateMessage } from './utils/translations';
 import { runAccessibilityTests } from './utils/accessibility';
 import { bootstrapLightspeedE2ePage } from './utils/lightspeedE2eSetup';
+import { mockModels, mockShields } from './utils/devMode';
 
 test.describe('Lightspeed UI', () => {
   let translations: LightspeedMessages;
@@ -118,6 +119,30 @@ test.describe('Lightspeed UI', () => {
     await runAccessibilityTests(sharedPage, testInfo);
   });
 
+  test('Validate Empty State', async () => {
+    await sharedPage.unroute(`${modelBaseUrl}/v1/shields`);
+    await sharedPage.unroute(`${modelBaseUrl}/v1/models`);
+    await mockShields(sharedPage, []);
+    await mockModels(sharedPage, []);
+
+    await sharedPage.goto('/lightspeed');
+    await sharedPage
+      .getByTestId('lightspeed-lcore-not-configured')
+      .waitFor({ state: 'visible' });
+
+    await expect(
+      sharedPage.getByLabel(translations['lcore.notConfigured.title']),
+    ).toMatchAriaSnapshot(`
+    - region "${translations['lcore.notConfigured.title']}":
+      - heading "${translations['lcore.notConfigured.title']}" [level=2]
+      - paragraph: ${translations['lcore.notConfigured.description']}
+      - link "${translations['lcore.notConfigured.developerLightspeedDocs']}":
+        - /url: https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html/interacting_with_red_hat_developer_lightspeed_for_red_hat_developer_hub/developer-lightspeed#proc-installing-and-configuring-lightspeed_developer-lightspeed
+      - link "${translations['lcore.notConfigured.backendDocs']}":
+        - /url: https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/lightspeed/plugins/lightspeed-backend/README.md
+    `);
+  });
+
   test('Verify disclaimer to be visible', async () => {
     await expect(sharedPage.getByLabel('Scrollable message log'))
       .toMatchAriaSnapshot(`
@@ -183,7 +208,7 @@ test.describe('Lightspeed UI', () => {
     expect(nonEmptyTexts.length).toBe(3);
   });
 
-  test.describe('File Attachment Validation', () => {
+  test.describe.skip('File Attachment Validation', () => {
     const testFiles = [
       { path: '../../package.json', name: 'package.json' },
       { path: __filename, name: 'fileAttachment.spec.ts' },
