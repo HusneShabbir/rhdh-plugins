@@ -38,6 +38,7 @@ import {
   clickMcpServersStatusColumn,
   clickMcpServersNameColumn,
   mcpServersTableBodyRows,
+  mcpEditServerButton,
 } from './pages/LightspeedPage';
 import { McpConfigureTokenPage } from './pages/McpConfigureTokenPage';
 import {
@@ -55,6 +56,16 @@ import {
   bootstrapLightspeedE2ePage,
   LIGHTSPEED_E2E_DEFAULT_BOT_QUERY,
 } from './utils/lightspeedE2eSetup';
+import {
+  DCR_SERVER_NAME,
+  STATIC_SERVER_NAME,
+  dcrDisplayModes,
+  dcrOnlyScenario,
+  dcrStatusLabel,
+  expectDcrModalReadOnly,
+  mixedDcrAndStaticScenario,
+  openDcrConfigureModal,
+} from './utils/mcpDcrSupport';
 
 test.describe('Intelligent assistant MCP', () => {
   let translations: LightspeedMessages;
@@ -291,6 +302,170 @@ test.describe('Intelligent assistant MCP', () => {
 
         await mcpToken.cancel();
         await mcpToken.closeMcpPanel();
+      });
+    });
+
+    test.describe('DCR MCP servers', () => {
+      test('shows Backstage-managed auth status in row', async () => {
+        await mockMcpServers(sharedPage, dcrOnlyScenario);
+        await openChatbot(sharedPage, translations);
+        await openMcpSettingsPanel(sharedPage, translations);
+
+        const dcrRow = mcpServerRow(sharedPage, DCR_SERVER_NAME, translations);
+        await expect(
+          dcrRow.getByText(
+            dcrStatusLabel(
+              translations,
+              dcrOnlyScenario.servers[0]?.toolCount ?? 0,
+            ),
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await expect(
+          dcrRow.getByText(translations['mcp.settings.status.tokenRequired'], {
+            exact: true,
+          }),
+        ).not.toBeVisible();
+
+        await closeMcpSettingsPanel(sharedPage, translations);
+      });
+
+      test('configure modal is read-only across all display modes', async () => {
+        for (const mode of dcrDisplayModes) {
+          await sharedPage.goto('/');
+          await openDcrConfigureModal(sharedPage, translations, mode);
+          await expectDcrModalReadOnly(sharedPage, translations);
+
+          await sharedPage
+            .getByRole('dialog')
+            .getByRole('button', { name: translations['common.cancel'] })
+            .click();
+          await closeMcpSettingsPanel(sharedPage, translations);
+        }
+      });
+
+      test('mixed servers show managed and token-edit configure behavior', async () => {
+        await mockMcpServers(sharedPage, mixedDcrAndStaticScenario);
+        await openChatbot(sharedPage, translations);
+        await openMcpSettingsPanel(sharedPage, translations);
+
+        const dcrRow = mcpServerRow(sharedPage, DCR_SERVER_NAME, translations);
+        await expect(
+          dcrRow.getByText(
+            dcrStatusLabel(
+              translations,
+              mixedDcrAndStaticScenario.servers[0]?.toolCount ?? 0,
+            ),
+            { exact: true },
+          ),
+        ).toBeVisible();
+
+        const staticRow = mcpServerRow(
+          sharedPage,
+          STATIC_SERVER_NAME,
+          translations,
+        );
+        await expect(
+          staticRow.getByText(
+            translations['mcp.settings.status.tokenRequired'],
+            {
+              exact: true,
+            },
+          ),
+        ).toBeVisible();
+
+        await mcpEditServerButton(
+          sharedPage,
+          DCR_SERVER_NAME,
+          translations,
+        ).click();
+        await expectDcrModalReadOnly(sharedPage, translations);
+        await sharedPage
+          .getByRole('dialog')
+          .getByRole('button', { name: translations['common.cancel'] })
+          .click();
+
+        await mcpEditServerButton(
+          sharedPage,
+          STATIC_SERVER_NAME,
+          translations,
+        ).click();
+        const staticModal = sharedPage.getByRole('dialog');
+        await expect(staticModal.locator('#mcp-pat-input')).toBeVisible();
+        await expect(
+          staticModal.getByRole('button', { name: translations['modal.save'] }),
+        ).toBeVisible();
+        await staticModal
+          .getByRole('button', { name: translations['common.cancel'] })
+          .click();
+
+        await closeMcpSettingsPanel(sharedPage, translations);
+      });
+
+      test('toggle off/on preserves disabled and managed status', async () => {
+        await mockMcpServers(sharedPage, dcrOnlyScenario);
+        await openChatbot(sharedPage, translations);
+        await openMcpSettingsPanel(sharedPage, translations);
+
+        const dcrRow = mcpServerRow(sharedPage, DCR_SERVER_NAME, translations);
+        await clickMcpServersStatusColumn(sharedPage, translations);
+        await mcpServerToggle(
+          sharedPage,
+          DCR_SERVER_NAME,
+          translations,
+        ).click();
+        await expect(
+          dcrRow.getByText(translations['mcp.settings.status.disabled'], {
+            exact: true,
+          }),
+        ).toBeVisible();
+
+        await mcpServerToggle(
+          sharedPage,
+          DCR_SERVER_NAME,
+          translations,
+        ).click();
+        await expect(
+          dcrRow.getByText(
+            dcrStatusLabel(
+              translations,
+              dcrOnlyScenario.servers[0]?.toolCount ?? 0,
+            ),
+            { exact: true },
+          ),
+        ).toBeVisible();
+
+        await closeMcpSettingsPanel(sharedPage, translations);
+      });
+
+      test('validate failure surfaces failed status', async () => {
+        await mockMcpServers(sharedPage, dcrOnlyScenario, {
+          failServerValidateFor: DCR_SERVER_NAME,
+          failServerValidateError:
+            translations['mcp.settings.token.validationFailed'],
+        });
+        await openChatbot(sharedPage, translations);
+        await openMcpSettingsPanel(sharedPage, translations);
+
+        const dcrRow = mcpServerRow(sharedPage, DCR_SERVER_NAME, translations);
+        await expect(
+          dcrRow.getByText(translations['mcp.settings.status.failed'], {
+            exact: true,
+          }),
+        ).toBeVisible();
+
+        await mcpEditServerButton(
+          sharedPage,
+          DCR_SERVER_NAME,
+          translations,
+        ).click();
+        await expectDcrModalReadOnly(sharedPage, translations);
+        await sharedPage
+          .getByRole('dialog')
+          .getByRole('button', { name: translations['common.cancel'] })
+          .click();
+
+        await closeMcpSettingsPanel(sharedPage, translations);
       });
     });
   });
