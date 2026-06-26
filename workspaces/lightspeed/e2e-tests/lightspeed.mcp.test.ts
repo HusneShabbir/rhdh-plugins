@@ -338,7 +338,10 @@ test.describe('Intelligent assistant MCP', () => {
 
           await sharedPage
             .getByRole('dialog')
-            .getByRole('button', { name: translations['common.cancel'] })
+            .getByRole('button', {
+              name: translations['common.cancel'],
+              exact: true,
+            })
             .click();
           await closeMcpSettingsPanel(sharedPage, translations);
         }
@@ -382,7 +385,10 @@ test.describe('Intelligent assistant MCP', () => {
         await expectDcrModalReadOnly(sharedPage, translations);
         await sharedPage
           .getByRole('dialog')
-          .getByRole('button', { name: translations['common.cancel'] })
+          .getByRole('button', {
+            name: translations['common.cancel'],
+            exact: true,
+          })
           .click();
 
         await mcpEditServerButton(
@@ -396,7 +402,10 @@ test.describe('Intelligent assistant MCP', () => {
           staticModal.getByRole('button', { name: translations['modal.save'] }),
         ).toBeVisible();
         await staticModal
-          .getByRole('button', { name: translations['common.cancel'] })
+          .getByRole('button', {
+            name: translations['common.cancel'],
+            exact: true,
+          })
           .click();
 
         await closeMcpSettingsPanel(sharedPage, translations);
@@ -462,7 +471,10 @@ test.describe('Intelligent assistant MCP', () => {
         await expectDcrModalReadOnly(sharedPage, translations);
         await sharedPage
           .getByRole('dialog')
-          .getByRole('button', { name: translations['common.cancel'] })
+          .getByRole('button', {
+            name: translations['common.cancel'],
+            exact: true,
+          })
           .click();
 
         await closeMcpSettingsPanel(sharedPage, translations);
